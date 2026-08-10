@@ -45,7 +45,9 @@ struct GameSettingsView: View {
             }
 
             Section("Rules") {
-                Toggle("Caught imposter can guess to win", isOn: $model.settings.imposterGuessToWin)
+                Label("If the imposter is caught, they must guess the word — a correct guess steals the win.",
+                      systemImage: "info.circle")
+                    .font(.caption).foregroundStyle(.secondary)
             }
 
             Section {

@@ -22,6 +22,9 @@ enum GameMessage: Codable {
     /// Client → host. This player wants to end discussion and vote now.
     case readyToVote(voterID: String)
 
+    /// Client → host. This player is taking back their "ready to vote".
+    case cancelReadyToVote(voterID: String)
+
     /// Host → all. Live "X of N ready to vote early" progress.
     case discussionProgress(ready: Int, threshold: Int)
 
@@ -34,10 +37,16 @@ enum GameMessage: Codable {
     /// Host → all. Live "X of Y votes in" progress.
     case voteProgress(received: Int, total: Int)
 
-    /// Host → all. The reveal.
+    /// Host → all. The reveal. May be sent twice for a caught imposter: first
+    /// with `awaitingImposterGuess == true` (word withheld) and again once the
+    /// mandatory guess is resolved.
     case roundResult(result: RoundResultData)
 
-    /// Host → all. Reset back to the waiting room for another round.
+    /// Imposter → host. The caught imposter's mandatory guess at the real word.
+    case imposterGuess(word: String)
+
+    /// Host → all. Reset back to the waiting room for another round (also used
+    /// by the host to cancel/abort a round in progress).
     case playAgainRequest
 
     /// Either direction. Surface an error to the user.
@@ -52,8 +61,14 @@ struct RoundResultData: Codable, Equatable {
     let voteBreakdown: [String: Int]
     /// True if the (single) most-voted player was an imposter.
     let imposterCaught: Bool
-    let secretWord: String
-    let decoyWord: String?
-    /// Set only when the "guess to win" rule flips a caught imposter to a win.
+    /// The most-voted player when caught — the one who must guess the word.
+    var caughtPlayerID: String?
+    /// Withheld (empty) while awaiting the mandatory guess; filled on resolve.
+    var secretWord: String
+    var decoyWord: String?
+    /// True while the caught imposter still owes their mandatory guess. The
+    /// word is withheld from everyone until this clears.
+    var awaitingImposterGuess: Bool = false
+    /// True if the caught imposter guessed the word correctly and stole the win.
     var imposterStoleWin: Bool = false
 }

@@ -38,7 +38,7 @@ struct VotingView: View {
             }
 
             if model.isHost {
-                Button(role: .destructive) {
+                Button {
                     model.hostEndVoting()
                 } label: {
                     Label("End Voting & Reveal", systemImage: "flag.checkered")
@@ -47,6 +47,13 @@ struct VotingView: View {
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
                 .padding(.horizontal, 40)
+                Button(role: .destructive) {
+                    model.hostCancelRound()
+                } label: {
+                    Label("Cancel Round", systemImage: "xmark.circle")
+                }
+                .font(.footnote)
+                .padding(.top, 2)
             } else if model.myVote != nil {
                 Text("Waiting for the host to reveal the results…")
                     .font(.caption).foregroundStyle(.secondary)

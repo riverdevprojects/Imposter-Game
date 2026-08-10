@@ -25,21 +25,30 @@ struct RoundActiveView: View {
                         .foregroundStyle(model.readyCount >= model.readyThreshold ? .green : .secondary)
                 }
                 Button {
-                    model.markReadyToVote()
+                    model.toggleReadyToVote()
                 } label: {
-                    Label(model.iAmReady ? "Ready — waiting for others" : "Ready to Vote",
-                          systemImage: model.iAmReady ? "checkmark.circle.fill" : "checklist")
+                    Label(model.iAmReady ? "Cancel Ready" : "Ready to Vote",
+                          systemImage: model.iAmReady ? "arrow.uturn.backward" : "checklist")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(model.iAmReady ? .bordered : .borderedProminent)
                 .controlSize(.large)
-                .disabled(model.iAmReady)
                 .padding(.horizontal, 40)
                 Text("Voting starts when the timer runs out, or when enough players are ready.")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
+
+                if model.isHost {
+                    Button(role: .destructive) {
+                        model.hostCancelRound()
+                    } label: {
+                        Label("Cancel Round", systemImage: "xmark.circle")
+                    }
+                    .font(.footnote)
+                    .padding(.top, 4)
+                }
             }
         }
         .padding()

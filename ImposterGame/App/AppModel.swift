@@ -64,6 +64,10 @@ final class AppModel: ObservableObject, MultipeerManagerDelegate {
     /// Host only: players who have tapped "Ready to Vote" this discussion.
     private var readyVoters: Set<String> = []
 
+    /// Host only: the full result (with the real word) held back while the
+    /// caught imposter completes their mandatory guess.
+    private var pendingFullResult: RoundResultData? = nil
+
     /// Number of "ready" taps needed to end discussion early — about half the
     /// connected players (majority-rounded).
     private func earlyEndThreshold(for connectedCount: Int) -> Int {
@@ -175,26 +179,63 @@ final class AppModel: ObservableObject, MultipeerManagerDelegate {
     }
 
     private func finishVotingIfHost(force: Bool) {
-        guard isHost, let engine else { return }
+        guard isHost, let engine, phase == .voting else { return }
         guard force || engine.allVotesIn else { return }
         engine.endRound()
-        guard var result = engine.tally() else { return }
-        applyGuessToWinIfNeeded(&result)
-        multipeer.send(.roundResult(result: result))
-        showResult(result)
+        guard let full = engine.tally() else { return }
+
+        if full.imposterCaught {
+            // Mandatory guess: reveal that the imposter was caught, but withhold
+            // the word from everyone until the caught imposter has guessed.
+            pendingFullResult = full
+            var awaiting = full
+            awaiting.awaitingImposterGuess = true
+            awaiting.secretWord = ""
+            awaiting.decoyWord = nil
+            multipeer.send(.roundResult(result: awaiting))
+            showResult(awaiting)
+        } else {
+            pendingFullResult = nil
+            multipeer.send(.roundResult(result: full))
+            showResult(full)
+        }
     }
 
-    /// Placeholder for the optional "imposter guesses to win" rule. The guess
-    /// itself is entered on the imposter's device during the reveal; for v1 the
-    /// host simply carries the flag through so the reveal screen can offer it.
-    private func applyGuessToWinIfNeeded(_ result: inout RoundResultData) {
-        // No automatic steal — handled interactively on the reveal screen.
+    /// Called on the caught imposter's device when they submit their guess.
+    func submitImposterGuess(_ word: String) {
+        if isHost {
+            resolveImposterGuess(word)
+        } else {
+            multipeer.send(.imposterGuess(word: word))
+        }
+    }
+
+    /// Host: score the caught imposter's guess and broadcast the final result.
+    private func resolveImposterGuess(_ word: String) {
+        guard isHost, var full = pendingFullResult else { return }
+        let guessed = word.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        full.imposterStoleWin = (guessed == full.secretWord.lowercased())
+        full.awaitingImposterGuess = false
+        pendingFullResult = nil
+        multipeer.send(.roundResult(result: full))
+        showResult(full)
     }
 
     func playAgain() {
         guard isHost else { return }
-        result = nil
-        myVote = nil
+        broadcastRoundResetAndReturnToLobby()
+    }
+
+    /// Host-only escape hatch: abort the round in progress (e.g. a misdeal, or
+    /// the caught imposter can't guess) and send everyone back to the lobby.
+    func hostCancelRound() {
+        guard isHost else { return }
+        broadcastRoundResetAndReturnToLobby()
+    }
+
+    private func broadcastRoundResetAndReturnToLobby() {
+        readyVoters = []
+        pendingFullResult = nil
         multipeer.send(.playAgainRequest)
         resetToWaiting()
         screen = .hostLobby
@@ -221,14 +262,18 @@ final class AppModel: ObservableObject, MultipeerManagerDelegate {
 
     // MARK: - End discussion early
 
-    /// Called when this player taps "Ready to Vote" during discussion.
-    func markReadyToVote() {
-        guard phase == .discussion, !iAmReady else { return }
-        iAmReady = true
-        if isHost {
-            registerReady(playerID: myID)
+    /// Toggle this player's "Ready to Vote" during discussion — tap to ready,
+    /// tap again to take it back.
+    func toggleReadyToVote() {
+        guard phase == .discussion else { return }
+        if iAmReady {
+            iAmReady = false
+            if isHost { unregisterReady(playerID: myID) }
+            else { multipeer.send(.cancelReadyToVote(voterID: myID)) }
         } else {
-            multipeer.send(.readyToVote(voterID: myID))
+            iAmReady = true
+            if isHost { registerReady(playerID: myID) }
+            else { multipeer.send(.readyToVote(voterID: myID)) }
         }
     }
 
@@ -242,6 +287,14 @@ final class AppModel: ObservableObject, MultipeerManagerDelegate {
         if readyCount >= readyThreshold {
             hostBeginVoting()
         }
+    }
+
+    /// Host: a player took back their ready vote.
+    private func unregisterReady(playerID: String) {
+        guard isHost, phase == .discussion else { return }
+        readyVoters.remove(playerID)
+        readyCount = readyVoters.count
+        multipeer.send(.discussionProgress(ready: readyCount, threshold: readyThreshold))
     }
 
     // MARK: - Local state transitions
@@ -356,6 +409,10 @@ final class AppModel: ObservableObject, MultipeerManagerDelegate {
             guard isHost else { return }
             registerReady(playerID: voterID)
 
+        case .cancelReadyToVote(let voterID):
+            guard isHost else { return }
+            unregisterReady(playerID: voterID)
+
         case .discussionProgress(let ready, let threshold):
             guard !isHost else { return }
             readyCount = ready
@@ -379,6 +436,10 @@ final class AppModel: ObservableObject, MultipeerManagerDelegate {
         case .roundResult(let result):
             guard !isHost else { return }
             showResult(result)
+
+        case .imposterGuess(let word):
+            guard isHost else { return }
+            resolveImposterGuess(word)
 
         case .playAgainRequest:
             guard !isHost else { return }

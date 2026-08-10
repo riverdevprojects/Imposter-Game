@@ -74,10 +74,12 @@ final class GameEngine {
 
         // Most-voted player (strict winner). Ties → nobody is caught.
         let caught: Bool
+        var caughtPlayerID: String? = nil
         let sorted = breakdown.sorted { $0.value > $1.value }
         if let top = sorted.first, top.value > 0 {
             let tie = sorted.dropFirst().first?.value == top.value
             caught = !tie && round.imposterIDs.contains(top.key)
+            if caught { caughtPlayerID = top.key }
         } else {
             caught = false
         }
@@ -88,6 +90,7 @@ final class GameEngine {
             imposterNames: imposterPlayers.map { $0.displayName },
             voteBreakdown: breakdown,
             imposterCaught: caught,
+            caughtPlayerID: caughtPlayerID,
             secretWord: round.secretWord,
             decoyWord: round.decoyWord
         )

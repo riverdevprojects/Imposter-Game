@@ -3,7 +3,7 @@ import SwiftUI
 struct RoundResultView: View {
     @EnvironmentObject var model: AppModel
     @State private var guess = ""
-    @State private var guessOutcome: String? = nil
+    @State private var didSubmitGuess = false
 
     private var result: RoundResultData? { model.result }
 
@@ -13,46 +13,42 @@ struct RoundResultView: View {
                 if let result {
                     banner(for: result)
                     imposterReveal(result)
-                    // Don't reveal the word to a caught imposter who still has a
-                    // guess coming — that would give away the answer.
-                    if !awaitingMyGuess(result) {
+                    if !result.awaitingImposterGuess {
                         wordReveal(result)
                     }
-                    guessToWin(result)
+                    guessSection(result)
                     breakdown(result)
                 } else {
                     ProgressView()
                 }
 
                 Spacer(minLength: 8)
-                footer
+                footer(for: result)
             }
             .padding()
         }
     }
 
-    // MARK: Sections
+    // MARK: State helpers
 
-    /// True on the caught imposter's own device while their steal-the-win guess
-    /// is still pending — used to withhold the answer.
-    private func awaitingMyGuess(_ result: RoundResultData) -> Bool {
-        model.settings.imposterGuessToWin
-            && result.imposterCaught
-            && model.myRoleIsImposter
-            && guessOutcome == nil
+    /// This device belongs to the caught imposter who owes the mandatory guess.
+    private func iAmCaught(_ result: RoundResultData) -> Bool {
+        result.caughtPlayerID == model.myID
     }
 
+    // MARK: Sections
+
     private func banner(for result: RoundResultData) -> some View {
-        let stoleWin = guessOutcome == "won" || result.imposterStoleWin
         let title: String
         let color: Color
         let icon: String
-        if awaitingMyGuess(result) {
-            // Neutral prompt so the banner doesn't spoil the outcome before the guess.
-            title = "You were caught — guess the word to steal the win!"
+        if result.awaitingImposterGuess {
             color = .orange; icon = "questionmark.circle.fill"
-        } else if stoleWin {
-            title = "Imposter stole the win!"; color = .red; icon = "crown.fill"
+            title = iAmCaught(result)
+                ? "You were caught — guess the word to steal the win!"
+                : "Imposter caught! Waiting for their guess…"
+        } else if result.imposterStoleWin {
+            title = "Imposter guessed it — imposter steals the win!"; color = .red; icon = "crown.fill"
         } else if result.imposterCaught {
             title = "Imposter caught — players win!"; color = .green; icon = "party.popper.fill"
         } else {
@@ -87,29 +83,35 @@ struct RoundResultView: View {
         }
     }
 
-    @ViewBuilder private func guessToWin(_ result: RoundResultData) -> some View {
-        if model.settings.imposterGuessToWin,
-           result.imposterCaught,
-           model.myRoleIsImposter,
-           guessOutcome == nil {
-            VStack(spacing: 10) {
-                Text("Enter your guess — get it right and you steal the win.")
-                    .font(.callout).multilineTextAlignment(.center)
-                HStack {
-                    TextField("Your guess", text: $guess)
-                        .textFieldStyle(.roundedBorder)
-                        .autocorrectionDisabled()
-                    Button("Guess") { evaluateGuess(against: result.secretWord) }
+    @ViewBuilder private func guessSection(_ result: RoundResultData) -> some View {
+        if result.awaitingImposterGuess {
+            if iAmCaught(result) {
+                VStack(spacing: 10) {
+                    Text("You must guess the real word. Get it right and you steal the win.")
+                        .font(.callout).multilineTextAlignment(.center)
+                    HStack {
+                        TextField("Your guess", text: $guess)
+                            .textFieldStyle(.roundedBorder)
+                            .autocorrectionDisabled()
+                            .disabled(didSubmitGuess)
+                        Button("Guess") {
+                            didSubmitGuess = true
+                            model.submitImposterGuess(guess)
+                        }
                         .buttonStyle(.borderedProminent)
-                        .disabled(guess.trimmingCharacters(in: .whitespaces).isEmpty)
+                        .disabled(didSubmitGuess || guess.trimmingCharacters(in: .whitespaces).isEmpty)
+                    }
+                    if didSubmitGuess {
+                        Text("Guess submitted — waiting for the result…")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
                 }
+                .padding()
+                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
+            } else {
+                ProgressView("Waiting for the caught imposter to guess…")
+                    .font(.caption)
             }
-            .padding()
-            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
-        } else if let guessOutcome {
-            Text(guessOutcome == "won" ? "Correct — you stole it!" : "Wrong guess.")
-                .font(.callout.weight(.semibold))
-                .foregroundStyle(guessOutcome == "won" ? .green : .secondary)
         }
     }
 
@@ -135,18 +137,27 @@ struct RoundResultView: View {
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
     }
 
-    private var footer: some View {
-        Group {
+    @ViewBuilder private func footer(for result: RoundResultData?) -> some View {
+        let awaiting = result?.awaitingImposterGuess ?? false
+        VStack(spacing: 8) {
             if model.isHost {
-                Button {
-                    model.playAgain()
-                } label: {
-                    Label("Play Again", systemImage: "arrow.clockwise")
-                        .frame(maxWidth: .infinity)
+                if awaiting {
+                    // Escape hatch: let the host abort if the imposter can't guess.
+                    Button(role: .destructive) { model.hostCancelRound() } label: {
+                        Label("Cancel Round", systemImage: "xmark.circle")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+                } else {
+                    Button { model.playAgain() } label: {
+                        Label("Play Again", systemImage: "arrow.clockwise")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-            } else {
+            } else if !awaiting {
                 Text("Waiting for the host to start the next round…")
                     .font(.caption).foregroundStyle(.secondary)
             }
@@ -166,11 +177,5 @@ struct RoundResultView: View {
 
     private func name(for id: String) -> String {
         model.players.first { $0.id == id }?.displayName ?? "Player"
-    }
-
-    private func evaluateGuess(against secret: String) {
-        let normalized = guess.trimmingCharacters(in: .whitespaces).lowercased()
-        let won = normalized == secret.lowercased()
-        guessOutcome = won ? "won" : "lost"
     }
 }

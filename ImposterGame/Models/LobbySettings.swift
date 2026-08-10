@@ -13,9 +13,6 @@ struct LobbySettings: Codable, Equatable {
     var useDecoyWord: Bool
     /// Length of the in-person discussion phase, in seconds.
     var discussionSeconds: Int
-    /// If enabled, a caught imposter gets one in-app guess at the real word
-    /// to steal the win.
-    var imposterGuessToWin: Bool
 
     static let randomCategory = "Random"
 
@@ -23,8 +20,7 @@ struct LobbySettings: Codable, Equatable {
         category: randomCategory,
         imposterCount: 1,
         useDecoyWord: false,        // Option A (Blind Imposter) is the v1 default
-        discussionSeconds: 75,
-        imposterGuessToWin: false
+        discussionSeconds: 75
     )
 
     /// The number of imposters actually used, clamped so there is always at

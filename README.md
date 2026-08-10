@@ -98,10 +98,21 @@ message the client sends on connect so the host can map its transient
 No Android, no host migration, no in‑app clue capture, no persistence across
 launches, no online/remote play, no custom categories.
 
+## Round rules of note
+
+- **Discussion timer is a deadline:** when it runs out the host auto‑advances
+  everyone to voting. Discussion can end early once about half the players tap
+  **Ready to Vote** (which is also cancelable).
+- **Mandatory imposter guess:** if the imposter is voted out, they *must* guess
+  the real word before the round resolves. The guess is host‑authoritative
+  (works on any phone, not just the host) and the word is withheld from everyone
+  until the guess is in. A correct guess steals the win for the imposter.
+- **Host can cancel a round:** the host has a Cancel Round control during
+  discussion, voting, and the awaiting‑guess reveal to abort back to the lobby
+  (e.g. a misdeal, or a caught imposter who can't guess).
+- **Screens stay awake** for the whole session so phones don't auto‑lock.
+
 ## Notes & limitations
 
-- The optional "imposter guesses to win" flow is evaluated locally on the caught
-  imposter's device during the reveal; it is not re‑broadcast to change the
-  scoreboard on other phones. A fuller networked version is a follow‑up.
 - The `AppIcon` is an empty placeholder — drop in a 1024×1024 image before
   shipping to TestFlight/App Store.
