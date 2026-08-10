@@ -34,7 +34,7 @@ struct JoinBrowseView: View {
             .navigationTitle("Find Games")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .navigationBarLeading) {
                     Button("Back") { model.leaveToMainMenu() }
                 }
             }

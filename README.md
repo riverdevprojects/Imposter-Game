@@ -26,7 +26,7 @@ being caught).
 ## Requirements
 
 - Xcode 16 or newer (the project uses file‑system‑synchronized groups).
-- iOS 17.0+ on device. **MultipeerConnectivity peer discovery does not work in
+- iOS 16.0+ on device (supports iOS 16.7). **MultipeerConnectivity peer discovery does not work in
   the iOS Simulator** — run on two or more physical devices to actually play.
 - Two or more devices on the same Wi‑Fi network and/or with Bluetooth enabled.
 

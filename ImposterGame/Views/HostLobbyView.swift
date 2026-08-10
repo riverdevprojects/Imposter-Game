@@ -15,7 +15,7 @@ struct HostLobbyView: View {
             .navigationTitle("Lobby")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .navigationBarLeading) {
                     Button("Leave") { model.leaveToMainMenu() }
                 }
             }
