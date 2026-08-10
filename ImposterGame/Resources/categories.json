@@ -1,0 +1,44 @@
+{
+  "categories": [
+    {
+      "name": "Animals",
+      "words": ["Elephant", "Penguin", "Giraffe", "Kangaroo", "Dolphin", "Octopus", "Cheetah", "Hedgehog", "Flamingo", "Koala", "Rhinoceros", "Chameleon", "Walrus", "Panda", "Owl", "Crocodile", "Squirrel", "Jellyfish", "Bat", "Camel"]
+    },
+    {
+      "name": "Movies",
+      "words": ["Titanic", "Inception", "Jaws", "Frozen", "Gladiator", "Avatar", "Rocky", "Shrek", "Casablanca", "Interstellar", "Jurassic Park", "The Matrix", "Toy Story", "The Godfather", "Up", "Coco", "Alien", "Grease", "Parasite", "Whiplash"]
+    },
+    {
+      "name": "Food",
+      "words": ["Pizza", "Sushi", "Tacos", "Pancakes", "Spaghetti", "Hamburger", "Ice Cream", "Popcorn", "Dumplings", "Waffles", "Burrito", "Cheesecake", "Ramen", "Croissant", "Nachos", "Lasagna", "Donut", "Pretzel", "Curry", "Bagel"]
+    },
+    {
+      "name": "Countries",
+      "words": ["Japan", "Brazil", "Canada", "Egypt", "Australia", "Italy", "Mexico", "India", "France", "Norway", "Kenya", "Thailand", "Greece", "Iceland", "Peru", "Morocco", "Vietnam", "Ireland", "Argentina", "Portugal"]
+    },
+    {
+      "name": "Sports",
+      "words": ["Basketball", "Tennis", "Swimming", "Soccer", "Boxing", "Golf", "Surfing", "Skiing", "Baseball", "Cycling", "Volleyball", "Archery", "Rowing", "Badminton", "Fencing", "Karate", "Bowling", "Hockey", "Climbing", "Cricket"]
+    },
+    {
+      "name": "Jobs",
+      "words": ["Firefighter", "Astronaut", "Chef", "Teacher", "Pilot", "Plumber", "Surgeon", "Detective", "Farmer", "Electrician", "Journalist", "Lifeguard", "Barber", "Architect", "Dentist", "Mechanic", "Librarian", "Nurse", "Photographer", "Carpenter"]
+    },
+    {
+      "name": "Household Items",
+      "words": ["Toaster", "Umbrella", "Pillow", "Mirror", "Kettle", "Vacuum", "Blanket", "Candle", "Scissors", "Hairdryer", "Clock", "Broom", "Lamp", "Remote", "Sponge", "Ladder", "Bucket", "Frying Pan", "Doorbell", "Coat Hanger"]
+    },
+    {
+      "name": "Places",
+      "words": ["Beach", "Library", "Airport", "Museum", "Hospital", "Stadium", "Castle", "Farm", "Zoo", "Cinema", "Bakery", "Lighthouse", "Aquarium", "Subway", "Campsite", "Gym", "Harbor", "Playground", "Volcano", "Desert"]
+    },
+    {
+      "name": "Fruits & Veg",
+      "words": ["Banana", "Pineapple", "Broccoli", "Watermelon", "Carrot", "Strawberry", "Avocado", "Pumpkin", "Mango", "Cucumber", "Grapes", "Eggplant", "Cherry", "Spinach", "Coconut", "Pepper", "Kiwi", "Onion", "Peach", "Corn"]
+    },
+    {
+      "name": "Instruments",
+      "words": ["Guitar", "Piano", "Drums", "Violin", "Trumpet", "Flute", "Saxophone", "Harp", "Accordion", "Cello", "Ukulele", "Banjo", "Harmonica", "Clarinet", "Tambourine", "Trombone", "Bagpipes", "Xylophone", "Double Bass", "Bongos"]
+    }
+  ]
+}
