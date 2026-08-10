@@ -31,7 +31,8 @@ struct RoundActiveView: View {
                           systemImage: model.iAmReady ? "arrow.uturn.backward" : "checklist")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(model.iAmReady ? .bordered : .borderedProminent)
+                .buttonStyle(.borderedProminent)
+                .tint(model.iAmReady ? .gray : .accentColor)
                 .controlSize(.large)
                 .padding(.horizontal, 40)
                 Text("Voting starts when the timer runs out, or when enough players are ready.")
