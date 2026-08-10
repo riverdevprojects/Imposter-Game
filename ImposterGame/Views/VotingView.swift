@@ -37,16 +37,18 @@ struct VotingView: View {
                     .font(.callout.weight(.semibold))
             }
 
+            if model.myVote != nil {
+                Text(model.isHost
+                     ? "Results reveal automatically once everyone has voted."
+                     : "Waiting for the host to reveal the results…")
+                    .font(.caption).foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+            }
+
             if model.isHost {
-                Button {
-                    model.hostEndVoting()
-                } label: {
-                    Label("End Voting & Reveal", systemImage: "flag.checkered")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .padding(.horizontal, 40)
+                // Escape hatch only — voting ends when all votes are in, so the
+                // host can't force an early (imposter-favoring) reveal.
                 Button(role: .destructive) {
                     model.hostCancelRound()
                 } label: {
@@ -54,9 +56,6 @@ struct VotingView: View {
                 }
                 .font(.footnote)
                 .padding(.top, 2)
-            } else if model.myVote != nil {
-                Text("Waiting for the host to reveal the results…")
-                    .font(.caption).foregroundStyle(.secondary)
             }
         }
         .padding(.bottom)

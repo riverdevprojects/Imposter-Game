@@ -85,5 +85,6 @@ struct PlayerListView: View {
             }
         }
         .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
     }
 }

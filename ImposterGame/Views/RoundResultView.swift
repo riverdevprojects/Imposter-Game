@@ -38,29 +38,53 @@ struct RoundResultView: View {
 
     // MARK: Sections
 
+    /// The imposters win by escaping the vote or by stealing it with a correct
+    /// guess; otherwise the regular players win.
+    private func impostersWon(_ result: RoundResultData) -> Bool {
+        result.imposterStoleWin || !result.imposterCaught
+    }
+
+    /// True if THIS device is on the winning side — drives the victory framing.
+    private func iWon(_ result: RoundResultData) -> Bool {
+        model.myRoleIsImposter ? impostersWon(result) : !impostersWon(result)
+    }
+
     private func banner(for result: RoundResultData) -> some View {
         let title: String
-        let color: Color
         let icon: String
+        var color: Color
+        var personal: String? = nil
+
         if result.awaitingImposterGuess {
             color = .orange; icon = "questionmark.circle.fill"
             title = iAmCaught(result)
                 ? "You were caught — guess the word to steal the win!"
                 : "Imposter caught! Waiting for their guess…"
-        } else if result.imposterStoleWin {
-            title = "Imposter guessed it — imposter steals the win!"; color = .red; icon = "crown.fill"
-        } else if result.imposterCaught {
-            title = "Imposter caught — players win!"; color = .green; icon = "party.popper.fill"
         } else {
-            title = "Imposter escaped — imposter wins!"; color = .red; icon = "eye.slash.fill"
+            // Color and personal line reflect whether *you* won.
+            color = iWon(result) ? .green : .red
+            personal = iWon(result) ? "You win! 🎉" : "You lose"
+            if result.imposterStoleWin {
+                title = "Imposter guessed it — imposter steals the win!"; icon = "crown.fill"
+            } else if result.imposterCaught {
+                title = "Imposter caught — players win!"; icon = "party.popper.fill"
+            } else {
+                title = "Imposter escaped — imposter wins!"; icon = "eye.slash.fill"
+            }
         }
+
         return VStack(spacing: 10) {
-            Image(systemName: icon).font(.system(size: 48)).foregroundStyle(color)
+            Image(systemName: icon).font(.system(size: 52)).foregroundStyle(color)
             Text(title).font(.title2.weight(.heavy)).multilineTextAlignment(.center)
+            if let personal {
+                Text(personal)
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(color)
+            }
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 24)
-        .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: 20))
+        .padding(.vertical, 28)
+        .background(color.opacity(0.14), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 
     private func imposterReveal(_ result: RoundResultData) -> some View {

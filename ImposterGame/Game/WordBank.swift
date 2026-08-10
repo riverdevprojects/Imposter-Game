@@ -3,15 +3,7 @@ import Foundation
 /// Loads `categories.json` from the app bundle and hands out words, avoiding
 /// immediate repeats within a session.
 final class WordBank {
-    struct Category: Codable {
-        let name: String
-        let words: [String]
-    }
-    private struct Bank: Codable {
-        let categories: [Category]
-    }
-
-    private(set) var categories: [Category] = []
+    private(set) var categories: [WordCategory] = []
     /// Words used in the last `recentWindow` rounds, to avoid repeats.
     private var recentWords: [String] = []
     private let recentWindow = 8
@@ -23,15 +15,28 @@ final class WordBank {
         load(from: bundle)
     }
 
+    /// Rebuild the category list = bundled categories + user categories. Custom
+    /// categories override a bundled one of the same name. Call before a round
+    /// so freshly added categories are available.
+    func reload(bundle: Bundle = .main) {
+        load(from: bundle)
+    }
+
     private func load(from bundle: Bundle) {
-        guard let url = bundle.url(forResource: "categories", withExtension: "json"),
-              let data = try? Data(contentsOf: url),
-              let bank = try? JSONDecoder().decode(Bank.self, from: data) else {
+        var bundled: [WordCategory] = []
+        if let url = bundle.url(forResource: "categories", withExtension: "json"),
+           let data = try? Data(contentsOf: url),
+           let file = try? JSONDecoder().decode(CategoryFile.self, from: data) {
+            bundled = file.categories.filter { !$0.words.isEmpty }
+        } else {
             assertionFailure("categories.json missing or malformed")
-            categories = [Category(name: "Animals", words: ["Elephant", "Penguin", "Giraffe", "Tiger"])]
-            return
+            bundled = [WordCategory(name: "Animals", words: ["Elephant", "Penguin", "Giraffe", "Tiger"])]
         }
-        categories = bank.categories.filter { !$0.words.isEmpty }
+
+        let custom = CustomCategoryStore.load().filter { !$0.words.isEmpty }
+        let customNames = Set(custom.map { $0.name.lowercased() })
+        // Custom categories win on name clash; then append the rest.
+        categories = custom + bundled.filter { !customNames.contains($0.name.lowercased()) }
     }
 
     func randomCategoryName() -> String {

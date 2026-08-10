@@ -97,6 +97,7 @@ final class AppModel: ObservableObject, MultipeerManagerDelegate {
     func hostGame() {
         isHost = true
         makeMultipeer()
+        wordBank.reload()   // pick up any custom categories added since launch
         engine = GameEngine(wordBank: wordBank)
         lobbyName = "\(displayName)'s Lobby"
         players = [myPlayer]
@@ -174,13 +175,9 @@ final class AppModel: ObservableObject, MultipeerManagerDelegate {
         enterVoting(ballot: ballotPlayers)
     }
 
-    func hostEndVoting() {
-        finishVotingIfHost(force: true)
-    }
-
-    private func finishVotingIfHost(force: Bool) {
+    private func finishVotingIfHost() {
         guard isHost, let engine, phase == .voting else { return }
-        guard force || engine.allVotesIn else { return }
+        guard engine.allVotesIn else { return }
         engine.endRound()
         guard let full = engine.tally() else { return }
 
@@ -249,7 +246,7 @@ final class AppModel: ObservableObject, MultipeerManagerDelegate {
             guard let engine else { return }
             votesReceived = engine.recordVote(voterID: myID, votedForID: playerID)
             broadcastVoteProgress()
-            finishVotingIfHost(force: false)
+            finishVotingIfHost()
         } else {
             multipeer.send(.castVote(voterID: myID, votedForID: playerID))
         }
@@ -426,7 +423,7 @@ final class AppModel: ObservableObject, MultipeerManagerDelegate {
             guard isHost, let engine else { return }
             votesReceived = engine.recordVote(voterID: voterID, votedForID: votedForID)
             broadcastVoteProgress()
-            finishVotingIfHost(force: false)
+            finishVotingIfHost()
 
         case .voteProgress(let received, let total):
             guard !isHost else { return }
@@ -483,7 +480,7 @@ final class AppModel: ObservableObject, MultipeerManagerDelegate {
             votesExpected = engine.expectedVoterCount
             votesReceived = engine.receivedVoteCount
             broadcastVoteProgress()
-            finishVotingIfHost(force: false)
+            finishVotingIfHost()
         }
     }
 

@@ -29,6 +29,7 @@ struct JoinBrowseView: View {
                             }
                         }
                     }
+                    .scrollContentBackground(.hidden)
                 }
             }
             .navigationTitle("Find Games")

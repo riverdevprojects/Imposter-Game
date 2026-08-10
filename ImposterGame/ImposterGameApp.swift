@@ -36,6 +36,8 @@ struct RootView: View {
 
     var body: some View {
         ZStack {
+            GameBackground()
+
             switch model.screen {
             case .mainMenu:        MainMenuView()
             case .hostLobby:       HostLobbyView()

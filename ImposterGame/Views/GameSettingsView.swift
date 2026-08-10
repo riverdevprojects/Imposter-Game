@@ -62,6 +62,7 @@ struct GameSettingsView: View {
                 .disabled(connectedCount < 3)
             }
         }
+        .scrollContentBackground(.hidden)
         .navigationTitle("Game Settings")
         .navigationBarTitleDisplayMode(.inline)
     }

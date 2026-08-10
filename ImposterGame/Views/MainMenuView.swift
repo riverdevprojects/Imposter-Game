@@ -2,40 +2,49 @@ import SwiftUI
 
 struct MainMenuView: View {
     @EnvironmentObject var model: AppModel
+    @State private var showingCategories = false
+
+    private var nameIsEmpty: Bool {
+        model.displayName.trimmingCharacters(in: .whitespaces).isEmpty
+    }
 
     var body: some View {
-        VStack(spacing: 32) {
+        VStack(spacing: 28) {
             Spacer()
 
-            VStack(spacing: 8) {
+            VStack(spacing: 10) {
                 Image(systemName: "theatermasks.fill")
-                    .font(.system(size: 64))
+                    .font(.system(size: 68))
                     .foregroundStyle(.tint)
+                    .shadow(color: .accentColor.opacity(0.35), radius: 12, y: 4)
                 Text("Imposter")
-                    .font(.system(size: 48, weight: .heavy, design: .rounded))
+                    .font(.system(size: 52, weight: .heavy, design: .rounded))
                 Text("A local party game for 3–10 players")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
 
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Your name")
-                    .font(.caption).foregroundStyle(.secondary)
-                TextField("Name", text: $model.displayName)
-                    .textFieldStyle(.roundedBorder)
-                    .autocorrectionDisabled()
+            Card {
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("Your name", systemImage: "person.fill")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    TextField("Name", text: $model.displayName)
+                        .textFieldStyle(.roundedBorder)
+                        .autocorrectionDisabled()
+                        .submitLabel(.done)
+                }
             }
-            .padding(.horizontal, 40)
+            .padding(.horizontal, 32)
 
-            VStack(spacing: 16) {
+            VStack(spacing: 14) {
                 Button {
                     model.hostGame()
                 } label: {
                     Label("Host a Game", systemImage: "antenna.radiowaves.left.and.right")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
+                .primaryAction()
 
                 Button {
                     model.joinGame()
@@ -46,8 +55,15 @@ struct MainMenuView: View {
                 .buttonStyle(.bordered)
                 .controlSize(.large)
             }
-            .padding(.horizontal, 40)
-            .disabled(model.displayName.trimmingCharacters(in: .whitespaces).isEmpty)
+            .padding(.horizontal, 32)
+            .disabled(nameIsEmpty)
+
+            Button {
+                showingCategories = true
+            } label: {
+                Label("Custom Categories", systemImage: "square.grid.2x2")
+                    .font(.subheadline)
+            }
 
             Spacer()
             Text("No internet needed · plays over Bluetooth & Wi-Fi")
@@ -55,5 +71,8 @@ struct MainMenuView: View {
                 .foregroundStyle(.secondary)
         }
         .padding()
+        .sheet(isPresented: $showingCategories) {
+            CategoryManagerView()
+        }
     }
 }
