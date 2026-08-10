@@ -18,21 +18,28 @@ struct RoundActiveView: View {
 
             Spacer()
 
-            if model.isHost {
+            VStack(spacing: 10) {
+                if model.readyThreshold > 0 {
+                    Text("\(model.readyCount) / \(model.readyThreshold) ready to vote early")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(model.readyCount >= model.readyThreshold ? .green : .secondary)
+                }
                 Button {
-                    model.hostBeginVoting()
+                    model.markReadyToVote()
                 } label: {
-                    Label("Start Voting", systemImage: "checklist")
+                    Label(model.iAmReady ? "Ready — waiting for others" : "Ready to Vote",
+                          systemImage: model.iAmReady ? "checkmark.circle.fill" : "checklist")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
+                .disabled(model.iAmReady)
                 .padding(.horizontal, 40)
-            } else {
-                Label("Discuss out loud — the host will start voting",
-                      systemImage: "bubble.left.and.bubble.right")
-                    .font(.caption)
+                Text("Voting starts when the timer runs out, or when enough players are ready.")
+                    .font(.caption2)
                     .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
             }
         }
         .padding()

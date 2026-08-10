@@ -40,6 +40,8 @@ struct GameSettingsView: View {
                 Stepper(value: $model.settings.discussionSeconds, in: 30...300, step: 15) {
                     Text("\(model.settings.discussionSeconds) seconds")
                 }
+                Text("Players discuss until this runs out — then everyone votes. Discussion can also end early once about half the players tap “Ready to Vote”.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
 
             Section("Rules") {

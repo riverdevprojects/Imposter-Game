@@ -45,6 +45,11 @@ final class AppModel: ObservableObject, MultipeerManagerDelegate {
     @Published var votesExpected = 0
     @Published var result: RoundResultData? = nil
 
+    // MARK: End-discussion-early votes
+    @Published var iAmReady = false
+    @Published var readyCount = 0
+    @Published var readyThreshold = 0
+
     // MARK: Errors
     @Published var banner: String? = nil
 
@@ -55,6 +60,15 @@ final class AppModel: ObservableObject, MultipeerManagerDelegate {
 
     /// Host only: maps a connected peer to the stable player id it announced.
     private var peerToPlayerID: [MCPeerID: String] = [:]
+
+    /// Host only: players who have tapped "Ready to Vote" this discussion.
+    private var readyVoters: Set<String> = []
+
+    /// Number of "ready" taps needed to end discussion early — about half the
+    /// connected players (majority-rounded).
+    private func earlyEndThreshold(for connectedCount: Int) -> Int {
+        max(1, (connectedCount + 1) / 2)
+    }
 
     private var myPlayer: PlayerInfo {
         PlayerInfo(id: myID, displayName: displayName, isHost: isHost, isConnected: true)
@@ -124,9 +138,13 @@ final class AppModel: ObservableObject, MultipeerManagerDelegate {
             return
         }
         let state = engine.startRound(players: players, settings: settings)
+        readyVoters = []
+        let threshold = earlyEndThreshold(for: players.filter { $0.isConnected }.count)
 
         // Tell everyone to move into discussion.
-        multipeer.send(.roundStart(category: state.category, discussionSeconds: settings.discussionSeconds))
+        multipeer.send(.roundStart(category: state.category,
+                                   discussionSeconds: settings.discussionSeconds,
+                                   readyThreshold: threshold))
 
         // Private per-player role assignment.
         for (peer, pid) in peerToPlayerID {
@@ -137,11 +155,13 @@ final class AppModel: ObservableObject, MultipeerManagerDelegate {
         // Apply the host's own role locally.
         applyRole(isImposter: state.imposterIDs.contains(myID), word: state.word(forPlayerID: myID))
         currentCategory = state.category
+        readyThreshold = threshold
         enterDiscussion(seconds: settings.discussionSeconds)
     }
 
     func hostBeginVoting() {
-        guard isHost, let engine else { return }
+        // Idempotent: the timer expiring and the early-end threshold can race.
+        guard isHost, let engine, phase == .discussion else { return }
         engine.beginVoting()
         votesExpected = engine.expectedVoterCount
         votesReceived = 0
@@ -199,6 +219,31 @@ final class AppModel: ObservableObject, MultipeerManagerDelegate {
         multipeer.send(.voteProgress(received: engine.receivedVoteCount, total: engine.expectedVoterCount))
     }
 
+    // MARK: - End discussion early
+
+    /// Called when this player taps "Ready to Vote" during discussion.
+    func markReadyToVote() {
+        guard phase == .discussion, !iAmReady else { return }
+        iAmReady = true
+        if isHost {
+            registerReady(playerID: myID)
+        } else {
+            multipeer.send(.readyToVote(voterID: myID))
+        }
+    }
+
+    /// Host: record a ready vote, broadcast progress, and end discussion early
+    /// once enough players are ready.
+    private func registerReady(playerID: String) {
+        guard isHost, phase == .discussion else { return }
+        readyVoters.insert(playerID)
+        readyCount = readyVoters.count
+        multipeer.send(.discussionProgress(ready: readyCount, threshold: readyThreshold))
+        if readyCount >= readyThreshold {
+            hostBeginVoting()
+        }
+    }
+
     // MARK: - Local state transitions
 
     private func applyRole(isImposter: Bool, word: String?) {
@@ -210,6 +255,8 @@ final class AppModel: ObservableObject, MultipeerManagerDelegate {
         phase = .discussion
         result = nil
         myVote = nil
+        iAmReady = false
+        readyCount = 0
         screen = .roundActive
         startDiscussionTimer(seconds: seconds)
     }
@@ -249,8 +296,11 @@ final class AppModel: ObservableObject, MultipeerManagerDelegate {
             DispatchQueue.main.async {
                 if self.discussionRemaining > 0 {
                     self.discussionRemaining -= 1
-                } else {
+                }
+                if self.discussionRemaining <= 0 {
                     t.invalidate()
+                    // Time's up: the host authoritatively moves everyone to voting.
+                    if self.isHost { self.hostBeginVoting() }
                 }
             }
         }
@@ -292,14 +342,24 @@ final class AppModel: ObservableObject, MultipeerManagerDelegate {
             guard !isHost else { return }
             players = list
 
-        case .roundStart(let category, let seconds):
+        case .roundStart(let category, let seconds, let threshold):
             guard !isHost else { return }
             currentCategory = category
+            readyThreshold = threshold
             enterDiscussion(seconds: seconds)
 
         case .roleAssignment(let isImposter, let word):
             guard !isHost else { return }
             applyRole(isImposter: isImposter, word: word)
+
+        case .readyToVote(let voterID):
+            guard isHost else { return }
+            registerReady(playerID: voterID)
+
+        case .discussionProgress(let ready, let threshold):
+            guard !isHost else { return }
+            readyCount = ready
+            readyThreshold = threshold
 
         case .startVoting(let ballotPlayers):
             guard !isHost else { return }
@@ -347,6 +407,15 @@ final class AppModel: ObservableObject, MultipeerManagerDelegate {
             players[idx].isConnected = false
         }
         rebuildAndBroadcastRoster()
+        // A disconnect changes the "half the players" math for ending discussion
+        // early, and may itself push us over the threshold.
+        if phase == .discussion {
+            readyVoters.remove(pid)
+            readyThreshold = earlyEndThreshold(for: players.filter { $0.isConnected }.count)
+            readyCount = readyVoters.count
+            multipeer.send(.discussionProgress(ready: readyCount, threshold: readyThreshold))
+            if readyCount >= readyThreshold { hostBeginVoting() }
+        }
         // A disconnect may complete voting if the missing player was the holdout.
         if phase == .voting, let engine {
             engine.markDisconnected(playerID: pid)

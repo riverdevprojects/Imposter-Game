@@ -13,7 +13,11 @@ struct RoundResultView: View {
                 if let result {
                     banner(for: result)
                     imposterReveal(result)
-                    wordReveal(result)
+                    // Don't reveal the word to a caught imposter who still has a
+                    // guess coming — that would give away the answer.
+                    if !awaitingMyGuess(result) {
+                        wordReveal(result)
+                    }
                     guessToWin(result)
                     breakdown(result)
                 } else {
@@ -29,12 +33,25 @@ struct RoundResultView: View {
 
     // MARK: Sections
 
+    /// True on the caught imposter's own device while their steal-the-win guess
+    /// is still pending — used to withhold the answer.
+    private func awaitingMyGuess(_ result: RoundResultData) -> Bool {
+        model.settings.imposterGuessToWin
+            && result.imposterCaught
+            && model.myRoleIsImposter
+            && guessOutcome == nil
+    }
+
     private func banner(for result: RoundResultData) -> some View {
         let stoleWin = guessOutcome == "won" || result.imposterStoleWin
         let title: String
         let color: Color
         let icon: String
-        if stoleWin {
+        if awaitingMyGuess(result) {
+            // Neutral prompt so the banner doesn't spoil the outcome before the guess.
+            title = "You were caught — guess the word to steal the win!"
+            color = .orange; icon = "questionmark.circle.fill"
+        } else if stoleWin {
             title = "Imposter stole the win!"; color = .red; icon = "crown.fill"
         } else if result.imposterCaught {
             title = "Imposter caught — players win!"; color = .green; icon = "party.popper.fill"
@@ -76,7 +93,7 @@ struct RoundResultView: View {
            model.myRoleIsImposter,
            guessOutcome == nil {
             VStack(spacing: 10) {
-                Text("You were caught — guess the real word to steal the win:")
+                Text("Enter your guess — get it right and you steal the win.")
                     .font(.callout).multilineTextAlignment(.center)
                 HStack {
                     TextField("Your guess", text: $guess)

@@ -12,11 +12,18 @@ enum GameMessage: Codable {
     /// Host → all. The authoritative roster.
     case playerListUpdate(players: [PlayerInfo])
 
-    /// Host → all. Move to the discussion phase.
-    case roundStart(category: String, discussionSeconds: Int)
+    /// Host → all. Move to the discussion phase. `readyThreshold` is how many
+    /// "ready to vote" taps end discussion early (about half the players).
+    case roundStart(category: String, discussionSeconds: Int, readyThreshold: Int)
 
     /// Host → one player. `word` is nil for the imposter unless decoy mode is on.
     case roleAssignment(isImposter: Bool, word: String?)
+
+    /// Client → host. This player wants to end discussion and vote now.
+    case readyToVote(voterID: String)
+
+    /// Host → all. Live "X of N ready to vote early" progress.
+    case discussionProgress(ready: Int, threshold: Int)
 
     /// Host → all. Move to the voting phase with the ballot.
     case startVoting(players: [PlayerInfo])

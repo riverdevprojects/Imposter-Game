@@ -1,14 +1,32 @@
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
 
 @main
 struct ImposterGameApp: App {
     @StateObject private var model = AppModel()
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environmentObject(model)
+                .onAppear(perform: keepScreenAwake)
         }
+        .onChange(of: scenePhase) { phase in
+            // Re-assert whenever we return to the foreground; iOS resets this
+            // flag on backgrounding.
+            if phase == .active { keepScreenAwake() }
+        }
+    }
+
+    /// Prevent the phones from auto-locking / sleeping during a game — players
+    /// need their role and the timer to stay visible the whole round.
+    private func keepScreenAwake() {
+        #if canImport(UIKit)
+        UIApplication.shared.isIdleTimerDisabled = true
+        #endif
     }
 }
 
